@@ -1,8 +1,6 @@
 
 import { IssueCategory } from './types';
-
-// This is a mock LLM classification service
-// In a real app, this would connect to an actual LLM API like OpenAI, Anthropic, etc.
+import { classifyEmailWithOpenAI, isOpenAIConfigured } from './openaiService';
 
 interface ClassificationResult {
   category: IssueCategory;
@@ -10,15 +8,15 @@ interface ClassificationResult {
   summary: string;
 }
 
-export async function classifyEmail(
+// Fallback classification service using keyword matching
+async function classifyEmailWithKeywords(
   subject: string,
   message: string
 ): Promise<ClassificationResult> {
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   // Simple keyword matching for demo purposes
-  // In reality this would be handled by an actual LLM
   const text = `${subject} ${message}`.toLowerCase();
 
   // Define keyword patterns for each category
@@ -72,7 +70,7 @@ export async function classifyEmail(
   // Generate confidence score (simulated)
   const confidence = maxCount === 0 ? 0.5 : Math.min(0.5 + (maxCount * 0.1), 0.95);
 
-  // Generate a summary (in a real app, this would be done by the LLM)
+  // Generate a summary
   let summary = '';
   const maxWords = 15;
   const words = message.split(' ');
@@ -87,4 +85,25 @@ export async function classifyEmail(
     confidence,
     summary: `${maxCategory} issue: ${summary}`
   };
+}
+
+// Main classification function
+export async function classifyEmail(
+  subject: string,
+  message: string
+): Promise<ClassificationResult> {
+  // Check if OpenAI is configured
+  if (isOpenAIConfigured()) {
+    try {
+      // Try to classify using OpenAI
+      return await classifyEmailWithOpenAI(subject, message);
+    } catch (error) {
+      console.error('OpenAI classification failed, falling back to keywords:', error);
+      // Fall back to keyword classification
+      return await classifyEmailWithKeywords(subject, message);
+    }
+  } else {
+    // Use keyword classification as fallback
+    return await classifyEmailWithKeywords(subject, message);
+  }
 }

@@ -105,3 +105,19 @@ export const updateIssueClassification = (
   
   return updateIssue(updatedIssue);
 };
+
+// Add multiple issues at once (for bulk import from Gmail, etc.)
+export const addMultipleIssues = (newIssues: Issue[]): Issue[] => {
+  if (!newIssues || newIssues.length === 0) return [];
+  
+  // Filter out any issues that already exist (by ID)
+  const existingIds = issues.map(issue => issue.id);
+  const uniqueNewIssues = newIssues.filter(issue => !existingIds.includes(issue.id));
+  
+  if (uniqueNewIssues.length === 0) return [];
+  
+  // Add the new issues to the store
+  issues = [...uniqueNewIssues, ...issues];
+  
+  return uniqueNewIssues;
+};
