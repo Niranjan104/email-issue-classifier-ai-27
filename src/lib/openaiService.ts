@@ -2,10 +2,16 @@
 import OpenAI from 'openai';
 import { IssueCategory } from './types';
 
-// Initialize OpenAI client (you'll need to provide your API key)
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'YOUR_OPENAI_API_KEY',
-});
+// Get API key from localStorage (set in ApiConfig component)
+const getOpenAIKey = () => localStorage.getItem('openai_api_key') || '';
+
+// Initialize OpenAI client with a function to get the latest API key
+const createOpenAIClient = () => {
+  return new OpenAI({
+    apiKey: getOpenAIKey(),
+    dangerouslyAllowBrowser: true // Required for browser usage
+  });
+};
 
 interface ClassificationResult {
   category: IssueCategory;
@@ -19,6 +25,15 @@ export async function classifyEmail(
   message: string
 ): Promise<ClassificationResult> {
   try {
+    // Check if API key is set
+    const apiKey = getOpenAIKey();
+    if (!apiKey) {
+      throw new Error('OpenAI API key not found. Please configure it in Admin settings.');
+    }
+    
+    // Create OpenAI client with the current API key
+    const openai = createOpenAIClient();
+    
     // Create a combined prompt with the email content
     const prompt = `
 You are an AI assistant tasked with classifying customer support emails into categories.
@@ -42,7 +57,7 @@ Format your response as JSON:
 
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o', 
+      model: 'gpt-4o-mini', // Using a faster and more cost-effective model 
       messages: [
         { role: 'system', content: 'You are a customer support email classifier.' },
         { role: 'user', content: prompt }
