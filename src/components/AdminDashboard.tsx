@@ -5,10 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { getAllIssues, updateIssueClassification, getIssuesByStatus } from '@/lib/firebase';
+import { getAllIssues, updateIssueClassification } from '@/lib/store';
 import { Issue, IssueCategory } from '@/lib/types';
-import { classifyEmail } from '@/lib/openaiService';
-import { setupEmailPolling } from '@/lib/gmailService';
+import { classifyEmail } from '@/lib/classificationService';
 import { useToast } from '@/components/ui/use-toast';
 
 export function AdminDashboard() {
@@ -19,32 +18,17 @@ export function AdminDashboard() {
 
   // Load issues when component mounts
   useEffect(() => {
-    const loadIssues = async () => {
-      try {
-        const allIssues = await getAllIssues();
-        setIssues(allIssues);
-      } catch (error) {
-        console.error("Error loading issues:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load issues. Please refresh the page.",
-          variant: "destructive",
-        });
-      }
+    const loadIssues = () => {
+      const allIssues = getAllIssues();
+      setIssues(allIssues);
     };
-
-    // Setup email polling when component mounts
-    const emailPollingInterval = setupEmailPolling(5); // Check every 5 minutes
 
     loadIssues();
-    // Regular polling for new issues
-    const issuesPollingInterval = setInterval(loadIssues, 10000); // Every 10 seconds
+    // In a real app, we'd set up a polling or websocket connection here
+    const interval = setInterval(loadIssues, 5000);
     
-    return () => {
-      clearInterval(issuesPollingInterval);
-      clearInterval(emailPollingInterval);
-    };
-  }, [toast]);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleClassify = async (issue: Issue) => {
     if (issue.classification) return; // Already classified
@@ -57,7 +41,7 @@ export function AdminDashboard() {
       const result = await classifyEmail(issue.subject, issue.message);
       
       // Update the issue with classification results
-      const updatedIssue = await updateIssueClassification(
+      const updatedIssue = updateIssueClassification(
         issue.id, 
         result.category, 
         result.confidence, 
@@ -66,8 +50,7 @@ export function AdminDashboard() {
       
       if (updatedIssue) {
         // Refresh issues list
-        const refreshedIssues = await getAllIssues();
-        setIssues(refreshedIssues);
+        setIssues(getAllIssues());
         setSelectedIssue(updatedIssue);
         
         toast({
@@ -76,7 +59,6 @@ export function AdminDashboard() {
         });
       }
     } catch (error) {
-      console.error("Classification error:", error);
       toast({
         title: "Classification Failed",
         description: "Failed to classify this issue. Please try again.",
