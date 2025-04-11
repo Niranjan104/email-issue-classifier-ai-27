@@ -12,6 +12,7 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import GoogleAuthCallback from "./pages/GoogleAuthCallback";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 
 const queryClient = new QueryClient();
 
@@ -25,9 +26,30 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Admin />} />
             <Route path="/admin" element={<Admin />} />
-            <Route path="/admin/as-admin" element={<AsAdmin />} />
-            <Route path="/admin/team" element={<TeamDetails />} />
-            <Route path="/admin/settings" element={<Settings />} />
+            <Route path="/admin/as-admin" element={
+              <div className="flex h-screen">
+                <AppSidebar />
+                <main className="flex-1 overflow-y-auto bg-background">
+                  <AsAdmin />
+                </main>
+              </div>
+            } />
+            <Route path="/admin/team" element={
+              <div className="flex h-screen">
+                <AppSidebar />
+                <main className="flex-1 overflow-y-auto bg-background">
+                  <TeamDetails />
+                </main>
+              </div>
+            } />
+            <Route path="/admin/settings" element={
+              <div className="flex h-screen">
+                <AppSidebar />
+                <main className="flex-1 overflow-y-auto bg-background">
+                  <Settings />
+                </main>
+              </div>
+            } />
             <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

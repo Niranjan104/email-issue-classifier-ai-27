@@ -87,23 +87,76 @@ async function classifyEmailWithKeywords(
   };
 }
 
-// Main classification function
+// JSON parser for custom model input/output
+export async function classifyEmailWithCustomModel(
+  subject: string, 
+  message: string
+): Promise<ClassificationResult> {
+  try {
+    // This is a placeholder for future custom model integration
+    // The real implementation would call the custom model API with the email content
+    
+    // Example of expected JSON input for the model:
+    const modelInput = {
+      subject: subject,
+      content: message,
+      requestType: "classification"
+    };
+    
+    console.log("Custom model input:", JSON.stringify(modelInput));
+    
+    // For now, fall back to keyword matching
+    return await classifyEmailWithKeywords(subject, message);
+    
+    // When the model is implemented, it should return JSON like:
+    // {
+    //   category: "Technical",
+    //   confidence: 0.92,
+    //   summary: "User is experiencing a login issue",
+    //   additionalInfo: { ... any other data ... }
+    // }
+  } catch (error) {
+    console.error("Error classifying with custom model:", error);
+    throw error;
+  }
+}
+
+// Main classification function with pipeline approach
 export async function classifyEmail(
   subject: string,
   message: string
 ): Promise<ClassificationResult> {
-  // Check if OpenAI is configured
-  if (isOpenAIConfigured()) {
-    try {
-      // Try to classify using OpenAI
-      return await classifyEmailWithOpenAI(subject, message);
-    } catch (error) {
-      console.error('OpenAI classification failed, falling back to keywords:', error);
-      // Fall back to keyword classification
-      return await classifyEmailWithKeywords(subject, message);
+  // Check for a custom model flag in localStorage (can be set in settings)
+  const useCustomModel = localStorage.getItem('use_custom_model') === 'true';
+  
+  try {
+    // Priority 1: Use custom model if enabled
+    if (useCustomModel) {
+      try {
+        return await classifyEmailWithCustomModel(subject, message);
+      } catch (error) {
+        console.warn('Custom model classification failed, trying OpenAI:', error);
+      }
     }
-  } else {
-    // Use keyword classification as fallback
+    
+    // Priority 2: Use OpenAI if configured
+    if (isOpenAIConfigured()) {
+      try {
+        return await classifyEmailWithOpenAI(subject, message);
+      } catch (error) {
+        console.warn('OpenAI classification failed, falling back to keywords:', error);
+      }
+    }
+    
+    // Priority 3: Fallback to keyword matching
     return await classifyEmailWithKeywords(subject, message);
+  } catch (error) {
+    console.error('All classification methods failed:', error);
+    // Return a generic result as last resort
+    return {
+      category: 'Other',
+      confidence: 0.5,
+      summary: 'Could not classify this issue automatically. Please review manually.'
+    };
   }
 }

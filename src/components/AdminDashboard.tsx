@@ -5,22 +5,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { getAllIssues, updateIssueClassification, addMultipleIssues } from '@/lib/store';
+import { getAllIssues, updateIssueClassification } from '@/lib/store';
 import { Issue, IssueCategory } from '@/lib/types';
 import { classifyEmail } from '@/lib/classificationService';
 import { useToast } from '@/components/ui/use-toast';
-import { fetchRecentEmails, initializeGmailApi, isGmailAuthenticated, logoutGmailApi } from '@/lib/gmailService';
-import { fetchEmails } from '@/lib/emailService';
 
 export function AdminDashboard() {
   const { toast } = useToast();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [isClassifying, setIsClassifying] = useState(false);
-  const [isImportingEmails, setIsImportingEmails] = useState(false);
-  const [maxEmailsToImport, setMaxEmailsToImport] = useState<number>(10);
-  const [isGmailConnected, setIsGmailConnected] = useState<boolean>(false);
 
   // Load issues when component mounts
   useEffect(() => {
@@ -36,16 +30,29 @@ export function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
   
-  // Check Gmail authentication status
+  // Auto-classify new issues
   useEffect(() => {
-    setIsGmailConnected(isGmailAuthenticated());
-  }, []);
+    const autoClassifyNewIssues = async () => {
+      const newIssues = issues.filter(issue => issue.status === 'New');
+      
+      if (newIssues.length > 0) {
+        // Process one issue at a time to avoid overwhelming the system
+        const issue = newIssues[0];
+        await handleClassify(issue, true);
+      }
+    };
+    
+    // Run auto-classification when issues change
+    autoClassifyNewIssues();
+  }, [issues]);
 
-  const handleClassify = async (issue: Issue) => {
+  const handleClassify = async (issue: Issue, isAutomatic = false) => {
     if (issue.classification) return; // Already classified
     
-    setIsClassifying(true);
-    setSelectedIssue(issue);
+    if (!isAutomatic) {
+      setIsClassifying(true);
+      setSelectedIssue(issue);
+    }
     
     try {
       // Call our classification service
@@ -62,84 +69,29 @@ export function AdminDashboard() {
       if (updatedIssue) {
         // Refresh issues list
         setIssues(getAllIssues());
-        setSelectedIssue(updatedIssue);
+        if (!isAutomatic) {
+          setSelectedIssue(updatedIssue);
+        }
         
-        toast({
-          title: "Issue Classified",
-          description: `Classified as "${result.category}" with ${Math.round(result.confidence * 100)}% confidence`,
-        });
+        if (!isAutomatic) {
+          toast({
+            title: "Issue Classified",
+            description: `Classified as "${result.category}" with ${Math.round(result.confidence * 100)}% confidence`,
+          });
+        }
       }
     } catch (error) {
-      toast({
-        title: "Classification Failed",
-        description: "Failed to classify this issue. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsClassifying(false);
-    }
-  };
-  
-  // Handle connecting to Gmail API
-  const handleConnectGmail = async () => {
-    try {
-      await initializeGmailApi();
-      setIsGmailConnected(isGmailAuthenticated());
-    } catch (error) {
-      console.error('Failed to connect to Gmail API:', error);
-      toast({
-        title: "Gmail Connection Failed",
-        description: "Could not connect to Gmail API. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Handle disconnecting from Gmail API
-  const handleDisconnectGmail = () => {
-    logoutGmailApi();
-    setIsGmailConnected(false);
-    toast({
-      title: "Gmail Disconnected",
-      description: "Successfully disconnected from Gmail API.",
-    });
-  };
-  
-  // Handle importing emails using our new SMTP/IMAP service
-  const handleImportEmails = async () => {
-    setIsImportingEmails(true);
-    
-    try {
-      // Use our new email service to fetch emails
-      const emails = await fetchEmails(maxEmailsToImport);
-      
-      if (emails.length === 0) {
+      if (!isAutomatic) {
         toast({
-          title: "No Emails Found",
-          description: "No emails were found to import.",
+          title: "Classification Failed",
+          description: "Failed to classify this issue. Please try again.",
+          variant: "destructive",
         });
-        return;
       }
-      
-      // Add emails to our store
-      const addedIssues = addMultipleIssues(emails);
-      
-      // Refresh issues list
-      setIssues(getAllIssues());
-      
-      toast({
-        title: "Emails Imported",
-        description: `Successfully imported ${addedIssues.length} emails.`,
-      });
-    } catch (error) {
-      console.error('Failed to import emails:', error);
-      toast({
-        title: "Import Failed",
-        description: "Failed to import emails. Please try again.",
-        variant: "destructive",
-      });
     } finally {
-      setIsImportingEmails(false);
+      if (!isAutomatic) {
+        setIsClassifying(false);
+      }
     }
   };
 
@@ -174,41 +126,6 @@ export function AdminDashboard() {
               <CardDescription>
                 Manage and classify incoming customer support emails
               </CardDescription>
-            </div>
-            <div className="flex flex-col gap-2 md:flex-row md:items-center">
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  max={50}
-                  className="w-20"
-                  value={maxEmailsToImport}
-                  onChange={(e) => setMaxEmailsToImport(parseInt(e.target.value) || 10)}
-                />
-                <Button 
-                  onClick={handleImportEmails}
-                  disabled={isImportingEmails}
-                  className="whitespace-nowrap bg-emerald-500 hover:bg-emerald-600"
-                >
-                  {isImportingEmails ? 'Importing...' : 'Import Emails'}
-                </Button>
-              </div>
-              {isGmailConnected ? (
-                <Button 
-                  variant="outline" 
-                  onClick={handleDisconnectGmail}
-                  className="whitespace-nowrap"
-                >
-                  Disconnect Gmail
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleConnectGmail}
-                  className="whitespace-nowrap bg-emerald-500 hover:bg-emerald-600"
-                >
-                  Connect Gmail
-                </Button>
-              )}
             </div>
           </div>
         </CardHeader>
