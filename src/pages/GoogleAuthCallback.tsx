@@ -43,7 +43,7 @@ const GoogleAuthCallback = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>Google Authentication</CardTitle>
@@ -55,7 +55,7 @@ const GoogleAuthCallback = () => {
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center p-6">
           {status === 'loading' && (
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
           )}
           <p className="text-center mt-4">{message}</p>
         </CardContent>

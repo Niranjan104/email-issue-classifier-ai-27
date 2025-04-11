@@ -11,6 +11,7 @@ import { Issue, IssueCategory } from '@/lib/types';
 import { classifyEmail } from '@/lib/classificationService';
 import { useToast } from '@/components/ui/use-toast';
 import { fetchRecentEmails, initializeGmailApi, isGmailAuthenticated, logoutGmailApi } from '@/lib/gmailService';
+import { fetchEmails } from '@/lib/emailService';
 
 export function AdminDashboard() {
   const { toast } = useToast();
@@ -104,21 +105,13 @@ export function AdminDashboard() {
     });
   };
   
-  // Handle importing emails from Gmail
+  // Handle importing emails using our new SMTP/IMAP service
   const handleImportEmails = async () => {
-    if (!isGmailAuthenticated()) {
-      toast({
-        title: "Gmail Not Connected",
-        description: "Please connect to Gmail API first.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setIsImportingEmails(true);
     
     try {
-      const emails = await fetchRecentEmails(maxEmailsToImport);
+      // Use our new email service to fetch emails
+      const emails = await fetchEmails(maxEmailsToImport);
       
       if (emails.length === 0) {
         toast({
@@ -172,7 +165,7 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -183,37 +176,35 @@ export function AdminDashboard() {
               </CardDescription>
             </div>
             <div className="flex flex-col gap-2 md:flex-row md:items-center">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  className="w-20"
+                  value={maxEmailsToImport}
+                  onChange={(e) => setMaxEmailsToImport(parseInt(e.target.value) || 10)}
+                />
+                <Button 
+                  onClick={handleImportEmails}
+                  disabled={isImportingEmails}
+                  className="whitespace-nowrap bg-emerald-500 hover:bg-emerald-600"
+                >
+                  {isImportingEmails ? 'Importing...' : 'Import Emails'}
+                </Button>
+              </div>
               {isGmailConnected ? (
-                <div className="flex flex-col gap-2 md:flex-row md:items-center">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={50}
-                      className="w-20"
-                      value={maxEmailsToImport}
-                      onChange={(e) => setMaxEmailsToImport(parseInt(e.target.value) || 10)}
-                    />
-                    <Button 
-                      onClick={handleImportEmails}
-                      disabled={isImportingEmails}
-                      className="whitespace-nowrap"
-                    >
-                      {isImportingEmails ? 'Importing...' : 'Import Emails'}
-                    </Button>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleDisconnectGmail}
-                    className="whitespace-nowrap"
-                  >
-                    Disconnect Gmail
-                  </Button>
-                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={handleDisconnectGmail}
+                  className="whitespace-nowrap"
+                >
+                  Disconnect Gmail
+                </Button>
               ) : (
                 <Button 
                   onClick={handleConnectGmail}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap bg-emerald-500 hover:bg-emerald-600"
                 >
                   Connect Gmail
                 </Button>
@@ -248,7 +239,7 @@ export function AdminDashboard() {
                   {newIssues.map(issue => (
                     <Card 
                       key={issue.id} 
-                      className={`cursor-pointer hover:bg-muted transition-colors ${selectedIssue?.id === issue.id ? 'border-primary' : ''}`}
+                      className={`cursor-pointer hover:bg-muted transition-colors ${selectedIssue?.id === issue.id ? 'border-emerald-500' : ''}`}
                       onClick={() => setSelectedIssue(issue)}
                     >
                       <CardContent className="p-4">
@@ -274,7 +265,7 @@ export function AdminDashboard() {
                   {classifiedIssues.map(issue => (
                     <Card 
                       key={issue.id} 
-                      className={`cursor-pointer hover:bg-muted transition-colors ${selectedIssue?.id === issue.id ? 'border-primary' : ''}`}
+                      className={`cursor-pointer hover:bg-muted transition-colors ${selectedIssue?.id === issue.id ? 'border-emerald-500' : ''}`}
                       onClick={() => setSelectedIssue(issue)}
                     >
                       <CardContent className="p-4">
@@ -303,7 +294,7 @@ export function AdminDashboard() {
                   {inProgressIssues.map(issue => (
                     <Card 
                       key={issue.id} 
-                      className={`cursor-pointer hover:bg-muted transition-colors ${selectedIssue?.id === issue.id ? 'border-primary' : ''}`}
+                      className={`cursor-pointer hover:bg-muted transition-colors ${selectedIssue?.id === issue.id ? 'border-emerald-500' : ''}`}
                       onClick={() => setSelectedIssue(issue)}
                     >
                       <CardContent className="p-4">
@@ -332,7 +323,7 @@ export function AdminDashboard() {
                   {resolvedIssues.map(issue => (
                     <Card 
                       key={issue.id} 
-                      className={`cursor-pointer hover:bg-muted transition-colors ${selectedIssue?.id === issue.id ? 'border-primary' : ''}`}
+                      className={`cursor-pointer hover:bg-muted transition-colors ${selectedIssue?.id === issue.id ? 'border-emerald-500' : ''}`}
                       onClick={() => setSelectedIssue(issue)}
                     >
                       <CardContent className="p-4">
@@ -365,6 +356,7 @@ export function AdminDashboard() {
                     <Button 
                       onClick={() => handleClassify(selectedIssue)}
                       disabled={isClassifying}
+                      className="bg-emerald-500 hover:bg-emerald-600"
                     >
                       {isClassifying ? 'Classifying...' : 'Classify with AI'}
                     </Button>
