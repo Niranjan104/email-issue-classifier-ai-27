@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AdminDashboard } from '@/components/AdminDashboard';
+import { ApiConfig } from '@/components/ApiConfig';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Logo } from '@/components/ui/logo';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Admin = () => {
   return (
@@ -21,7 +23,22 @@ const Admin = () => {
       </header>
       
       <main className="container mx-auto px-4 md:px-6 py-8">
-        <AdminDashboard />
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="config">API Configuration</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="dashboard">
+            <AdminDashboard />
+          </TabsContent>
+          
+          <TabsContent value="config">
+            <div className="max-w-xl mx-auto">
+              <ApiConfig />
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
       
       <footer className="bg-white border-t py-6 mt-auto">

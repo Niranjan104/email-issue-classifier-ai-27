@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { addIssue } from '@/lib/store';
+import { addIssue } from '@/lib/firebase';
 import { useToast } from '@/components/ui/use-toast';
 
 export function IssueForm() {
@@ -30,8 +30,8 @@ export function IssueForm() {
     setIsSubmitting(true);
     
     try {
-      // Add the issue to our store
-      const newIssue = addIssue(email, subject, message);
+      // Add the issue to our Firebase database
+      await addIssue(email, subject, message);
       
       // Reset form
       setEmail('');
@@ -43,6 +43,7 @@ export function IssueForm() {
         description: "Your issue has been submitted. We'll get back to you soon!",
       });
     } catch (error) {
+      console.error("Error submitting issue:", error);
       toast({
         title: "Error",
         description: "Failed to submit your issue. Please try again.",
